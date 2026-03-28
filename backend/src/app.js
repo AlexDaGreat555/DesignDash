@@ -6,7 +6,10 @@ const promptRoutes = require('./routes/promptRoutes')
 
 const app = express()
 
-app.use(cors())
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+  : ['http://localhost:3000']
+app.use(cors({ origin: allowedOrigins, credentials: true }))
 app.use(express.json())
 
 // Serve uploaded images statically

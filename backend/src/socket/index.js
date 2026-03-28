@@ -6,8 +6,11 @@ const { registerVotingHandlers } = require('./votingHandlers')
 let io
 
 function initSocket(server) {
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((s) => s.trim())
+    : ['http://localhost:3000']
   io = new Server(server, {
-    cors: { origin: '*' },
+    cors: { origin: allowedOrigins, credentials: true },
   })
 
   io.on('connection', (socket) => {
