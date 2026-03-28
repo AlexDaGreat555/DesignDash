@@ -1,16 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useGame } from '../context/GameContext'
+import { getResults } from '../services/api'
 import './ResultsPage.css'
-
-// Mock results — in production these come from the server after voting concludes
-const MOCK_RESULTS = [
-  { rank: 1, nickname: 'Alex Chen',    voterScore: 4.9, aiScore: 4.7, imageUrl: 'https://picsum.photos/seed/winner1/400/300' },
-  { rank: 2, nickname: 'Jordan Smith', voterScore: 4.6, aiScore: 4.4, imageUrl: 'https://picsum.photos/seed/winner2/400/300' },
-  { rank: 3, nickname: 'Sam Rivera',   voterScore: 4.3, aiScore: 4.1, imageUrl: 'https://picsum.photos/seed/winner3/400/300' },
-  { rank: 4, nickname: 'Taylor Kim',   voterScore: 3.9, aiScore: 3.7, imageUrl: 'https://picsum.photos/seed/player4/400/300' },
-  { rank: 5, nickname: 'Morgan Davis', voterScore: 3.6, aiScore: 3.4, imageUrl: 'https://picsum.photos/seed/player5/400/300' },
-]
 
 const PODIUM_COLORS = {
   1: { bg: '#7c3aed', text: '#fff' },   // purple / gold
@@ -18,18 +10,38 @@ const PODIUM_COLORS = {
   3: { bg: '#92400e', text: '#fff' },   // brown / bronze
 }
 
-function combinedScore(r) {
-  return ((r.voterScore + r.aiScore) / 2).toFixed(1)
-}
-
 export default function ResultsPage() {
   const { code } = useParams()
   const { state } = useGame()
-  const results = MOCK_RESULTS
+
+  const [results, setResults] = useState(state.scores?.length ? state.scores : null)
+  const [loading, setLoading] = useState(!results)
+  const [error, setError] = useState(null)
   const [expandedImage, setExpandedImage] = useState(null)
 
-  const top3 = results.slice(0, 3)
-  const rest = results.slice(3)
+  // If scores aren't in context (e.g. page refresh), fetch from API
+  useEffect(() => {
+    if (results) return
+    let cancelled = false
+    setLoading(true)
+    getResults(code)
+      .then(({ data }) => {
+        if (!cancelled) {
+          setResults(data)
+          setLoading(false)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('Results could not be loaded. The session may have expired.')
+          setLoading(false)
+        }
+      })
+    return () => { cancelled = true }
+  }, [code, results])
+
+  const top3 = results?.slice(0, 3) || []
+  const rest = results?.slice(3) || []
 
   // Podium order: 2nd, 1st, 3rd for visual layout
   const podiumOrder = [top3[1], top3[0], top3[2]].filter(Boolean)
@@ -50,111 +62,138 @@ export default function ResultsPage() {
       </header>
 
       <main className="results-content">
-        {/* ======== SECTION 1: Rankings ======== */}
-        <section className="results-rankings-section">
-          <div className="results-title-row">
-            <span className="results-sparkle">✨</span>
-            <h1 className="results-title">Results</h1>
-            <span className="results-sparkle">✨</span>
+        {/* Loading state */}
+        {loading && (
+          <div className="results-loading">
+            <div className="results-spinner" />
+            <p>Loading results...</p>
           </div>
-          <p className="results-subtitle">Final Standings</p>
+        )}
 
-          {/* Podium */}
-          <div className="podium">
-            {podiumOrder.map((player) => {
-              const place = player.rank
-              const colors = PODIUM_COLORS[place]
-              const isFirst = place === 1
-              return (
-                <div key={player.rank} className={`podium-slot podium-slot--${place}`}>
-                  {/* Design preview above podium */}
-                  <button
-                    className="podium-design-preview"
-                    onClick={() => setExpandedImage(player.imageUrl)}
-                    title="Click to expand"
-                  >
-                    <img src={player.imageUrl} alt={`${player.nickname}'s design`} className="podium-design-img" />
-                    <span className="podium-design-expand">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-                    </span>
-                  </button>
-
-                  {/* Rank circle */}
-                  <div className="podium-rank-circle" style={{ background: colors.bg, color: colors.text }}>
-                    {isFirst && <span className="podium-crown">👑</span>}
-                    {place}
-                  </div>
-
-                  {/* Podium block */}
-                  <div className="podium-block" style={{ background: colors.bg }}>
-                    <div className="podium-score-row">
-                      <span className="podium-star">★</span>
-                      <span className="podium-score">{combinedScore(player)}</span>
-                    </div>
-                    <span className="podium-name">{player.nickname}</span>
-                  </div>
-                </div>
-              )
-            })}
+        {/* Error state */}
+        {error && (
+          <div className="results-error">
+            <p>{error}</p>
+            <Link to="/" className="btn btn-primary">Back to Home</Link>
           </div>
+        )}
 
-          {/* Remaining players */}
-          {rest.length > 0 && (
-            <div className="results-rest">
-              {rest.map((player) => (
-                <div key={player.rank} className="results-rest-row">
-                  <span className="results-rest-rank">{player.rank}</span>
-                  <span className="results-rest-name">{player.nickname}</span>
-                  <span className="results-rest-score">
-                    <span className="results-rest-star">★</span> {combinedScore(player)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* ======== SECTION 2: AI Judge Ratings ======== */}
-        <section className="ai-section">
-          <div className="ai-section-header">
-            <span className="ai-section-icon">✦</span>
-            <h2 className="ai-section-title">AI Judge Ratings</h2>
-          </div>
-
-          <div className="ai-ratings-list">
-            {results.map((player) => (
-              <div key={player.rank} className="ai-rating-row">
-                <span className={`ai-rank-badge ai-rank-badge--${player.rank <= 3 ? player.rank : 'default'}`}>
-                  {player.rank}
-                </span>
-                <span className="ai-rating-name">{player.nickname}</span>
-                <div className="ai-rating-scores">
-                  <div className="ai-rating-score-group">
-                    <span className="ai-rating-label">Voter Score</span>
-                    <span className="ai-rating-value">
-                      <span className="ai-rating-star">★</span> {player.voterScore.toFixed(1)}
-                    </span>
-                  </div>
-                  <div className="ai-rating-score-group">
-                    <span className="ai-rating-label ai-rating-label--ai">AI Score</span>
-                    <span className="ai-rating-value ai-rating-value--ai">
-                      <span className="ai-rating-star">★</span> {player.aiScore.toFixed(1)}
-                    </span>
-                  </div>
-                </div>
+        {/* Results content */}
+        {results && !loading && !error && (
+          <>
+            {/* ======== SECTION 1: Rankings ======== */}
+            <section className="results-rankings-section">
+              <div className="results-title-row">
+                <span className="results-sparkle">✨</span>
+                <h1 className="results-title">Results</h1>
+                <span className="results-sparkle">✨</span>
               </div>
-            ))}
-          </div>
+              <p className="results-subtitle">Final Standings</p>
 
-          <p className="ai-section-footnote">
-            Combined scores calculated from voter ratings and AI judge feedback
-          </p>
-        </section>
+              {/* Podium */}
+              <div className="podium">
+                {podiumOrder.map((player) => {
+                  const place = player.rank
+                  const colors = PODIUM_COLORS[place]
+                  const isFirst = place === 1
+                  return (
+                    <div key={player.rank} className={`podium-slot podium-slot--${place}`}>
+                      {/* Design preview above podium */}
+                      {player.imageUrl ? (
+                        <button
+                          className="podium-design-preview"
+                          onClick={() => setExpandedImage(player.imageUrl)}
+                          title="Click to expand"
+                        >
+                          <img src={player.imageUrl} alt={`${player.nickname}'s design`} className="podium-design-img" />
+                          <span className="podium-design-expand">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="podium-design-preview podium-no-submission">
+                          <span className="podium-no-submission-text">No Submission</span>
+                        </div>
+                      )}
 
-        {/* Back to home */}
-        <div className="results-actions">
-          <Link to="/" className="btn btn-primary">Back to Home</Link>
-        </div>
+                      {/* Rank circle */}
+                      <div className="podium-rank-circle" style={{ background: colors.bg, color: colors.text }}>
+                        {isFirst && <span className="podium-crown">👑</span>}
+                        {place}
+                      </div>
+
+                      {/* Podium block */}
+                      <div className="podium-block" style={{ background: colors.bg }}>
+                        <div className="podium-score-row">
+                          <span className="podium-star">★</span>
+                          <span className="podium-score">{player.combinedScore.toFixed(1)}</span>
+                        </div>
+                        <span className="podium-name">{player.nickname}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Remaining players */}
+              {rest.length > 0 && (
+                <div className="results-rest">
+                  {rest.map((player) => (
+                    <div key={player.rank} className="results-rest-row">
+                      <span className="results-rest-rank">{player.rank}</span>
+                      <span className="results-rest-name">{player.nickname}</span>
+                      <span className="results-rest-score">
+                        <span className="results-rest-star">★</span> {player.combinedScore.toFixed(1)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* ======== SECTION 2: AI Judge Ratings ======== */}
+            <section className="ai-section">
+              <div className="ai-section-header">
+                <span className="ai-section-icon">✦</span>
+                <h2 className="ai-section-title">AI Judge Ratings</h2>
+              </div>
+
+              <div className="ai-ratings-list">
+                {results.map((player) => (
+                  <div key={player.rank} className="ai-rating-row">
+                    <span className={`ai-rank-badge ai-rank-badge--${player.rank <= 3 ? player.rank : 'default'}`}>
+                      {player.rank}
+                    </span>
+                    <span className="ai-rating-name">{player.nickname}</span>
+                    <div className="ai-rating-scores">
+                      <div className="ai-rating-score-group">
+                        <span className="ai-rating-label">Voter Score</span>
+                        <span className="ai-rating-value">
+                          <span className="ai-rating-star">★</span> {player.voterScore.toFixed(1)}
+                        </span>
+                      </div>
+                      <div className="ai-rating-score-group">
+                        <span className="ai-rating-label ai-rating-label--ai">AI Score</span>
+                        <span className="ai-rating-value ai-rating-value--ai">
+                          <span className="ai-rating-star">★</span> {player.aiScore.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="ai-section-footnote">
+                Combined scores calculated from voter ratings and AI judge feedback
+              </p>
+            </section>
+
+            {/* Back to home */}
+            <div className="results-actions">
+              <Link to="/" className="btn btn-primary">Back to Home</Link>
+            </div>
+          </>
+        )}
       </main>
 
       {/* Expanded image modal */}

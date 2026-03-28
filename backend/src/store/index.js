@@ -1,6 +1,7 @@
 // In-memory store — replace with Redis for multi-process deployments
 const rooms = new Map()
 const db = require('../db')
+const { scoreSubmission } = require('../services/aiJudge')
 
 class Room {
   constructor(code, spec, timeLimitSeconds) {
@@ -56,15 +57,35 @@ class Room {
   }
 
   computeScores() {
-    return this.players
+    const scores = this.players
       .map((p) => {
+        const hasSubmission = !!p.submissionId
         const received = this.votes.filter((v) => v.submissionId === p.submissionId)
-        const avg = received.length
-          ? received.reduce((sum, v) => sum + v.stars, 0) / received.length
+        const voterScore = hasSubmission && received.length
+          ? Math.round((received.reduce((sum, v) => sum + v.stars, 0) / received.length) * 10) / 10
           : 0
-        return { playerId: p.id, nickname: p.nickname, score: avg }
+        const aiScore = hasSubmission
+          ? scoreSubmission(p.submissionId, this.spec)
+          : 0
+        const combinedScore = hasSubmission
+          ? Math.round(((voterScore + aiScore) / 2) * 100) / 100
+          : 0
+        return {
+          playerId: p.id,
+          nickname: p.nickname,
+          submissionId: p.submissionId,
+          imageUrl: p.submissionId ? `/uploads/${p.submissionId}` : null,
+          voterScore,
+          aiScore,
+          combinedScore,
+        }
       })
-      .sort((a, b) => b.score - a.score)
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+
+    scores.forEach((entry, i) => { entry.rank = i + 1 })
+
+    this.finalScores = scores
+    return scores
   }
 }
 

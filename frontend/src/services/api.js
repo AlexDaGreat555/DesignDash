@@ -16,4 +16,7 @@ export const uploadDesign = (code, formData) =>
 export const submitVote = (code, submissionId, stars) =>
   api.post(`/challenges/${code}/vote`, { submissionId, stars })
 
+export const getResults = (code) =>
+  api.get(`/challenges/${code}/results`)
+
 export default api

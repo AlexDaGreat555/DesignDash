@@ -29,4 +29,13 @@ function submitVote(req, res) {
   res.json({ ok: true })
 }
 
-module.exports = { createChallenge, joinChallenge, uploadDesign, submitVote }
+function getResults(req, res) {
+  const { code } = req.params
+  const room = store.getRoom(code)
+  if (!room || room.phase !== 'results' || !room.finalScores) {
+    return res.status(404).json({ error: 'Results not available' })
+  }
+  res.json(room.finalScores)
+}
+
+module.exports = { createChallenge, joinChallenge, uploadDesign, submitVote, getResults }
