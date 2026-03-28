@@ -11,6 +11,8 @@ const initialState = {
   players: [],
   spec: null,
   phase: 'idle', // idle | lobby | sprint | processing | voting | results
+  startedAt: null,
+  submittedCount: 0,
   currentSlide: 0,
   submissions: [],
   scores: [],
@@ -31,6 +33,16 @@ function gameReducer(state, action) {
       return { ...state, players: action.players }
     case 'SET_SPEC':
       return { ...state, spec: action.spec }
+    case 'SET_GAME_STARTED':
+      return {
+        ...state,
+        spec: action.spec,
+        phase: 'sprint',
+        startedAt: action.startedAt,
+        timeLimit: action.timeLimitSeconds,
+      }
+    case 'SET_SUBMITTED_COUNT':
+      return { ...state, submittedCount: action.submittedCount }
     case 'SET_PHASE':
       return { ...state, phase: action.phase }
     case 'SET_SLIDE':
