@@ -56,32 +56,32 @@ class Room {
     return this.votes.some((v) => v.voterId === voterId && v.submissionId === submissionId)
   }
 
-  computeScores() {
-    const scores = this.players
-      .map((p) => {
-        const hasSubmission = !!p.submissionId
-        const received = this.votes.filter((v) => v.submissionId === p.submissionId)
-        const voterScore = hasSubmission && received.length
-          ? Math.round((received.reduce((sum, v) => sum + v.stars, 0) / received.length) * 10) / 10
-          : 0
-        const aiScore = hasSubmission
-          ? scoreSubmission(p.submissionId, this.spec)
-          : 0
-        const combinedScore = hasSubmission
-          ? Math.round(((voterScore + aiScore) / 2) * 100) / 100
-          : 0
-        return {
-          playerId: p.id,
-          nickname: p.nickname,
-          submissionId: p.submissionId,
-          imageUrl: p.submissionId ? `/uploads/${p.submissionId}` : null,
-          voterScore,
-          aiScore,
-          combinedScore,
-        }
-      })
-      .sort((a, b) => b.combinedScore - a.combinedScore)
+  async computeScores() {
+    // Score all submissions in parallel — one Gemini call per player who uploaded
+    const scores = await Promise.all(this.players.map(async (p) => {
+      const hasSubmission = !!p.submissionId
+      const received = this.votes.filter((v) => v.submissionId === p.submissionId)
+      const voterScore = hasSubmission && received.length
+        ? Math.round((received.reduce((sum, v) => sum + v.stars, 0) / received.length) * 10) / 10
+        : 0
+      const aiScore = hasSubmission
+        ? await scoreSubmission(p.submissionId, this.spec)
+        : 0
+      const combinedScore = hasSubmission
+        ? Math.round(((voterScore + aiScore) / 2) * 100) / 100
+        : 0
+      return {
+        playerId: p.id,
+        nickname: p.nickname,
+        submissionId: p.submissionId,
+        imageUrl: p.submissionId ? `/uploads/${p.submissionId}` : null,
+        voterScore,
+        aiScore,
+        combinedScore,
+      }
+    }))
 
+    scores.sort((a, b) => b.combinedScore - a.combinedScore)
     scores.forEach((entry, i) => { entry.rank = i + 1 })
 
     this.finalScores = scores
