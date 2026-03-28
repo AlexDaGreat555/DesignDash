@@ -39,7 +39,7 @@ class Room {
     this.submissions = [...this.players].map((p) => ({
       id: p.submissionId,
       playerId: p.id,
-      imageUrl: p.submissionId ? `/uploads/${p.submissionId}` : null,
+      imageUrl: p.submissionId ? `/api/challenges/submissions/${p.submissionId}` : null,
     }))
     // Fisher-Yates shuffle
     for (let i = this.submissions.length - 1; i > 0; i--) {
@@ -74,7 +74,7 @@ class Room {
         playerId: p.id,
         nickname: p.nickname,
         submissionId: p.submissionId,
-        imageUrl: p.submissionId ? `/uploads/${p.submissionId}` : null,
+        imageUrl: p.submissionId ? `/api/challenges/submissions/${p.submissionId}` : null,
         voterScore,
         aiScore,
         combinedScore,
