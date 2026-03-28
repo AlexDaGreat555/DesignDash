@@ -44,7 +44,7 @@ export default function LobbyPage() {
 
   // TODO: emit START_GAME via socket once backend is connected
   const handleStart = () => {
-    console.log('[mock] START_GAME emitted for code', code)
+    dispatch({ type: 'SET_PHASE', phase: 'sprint' })
   }
 
   return (
