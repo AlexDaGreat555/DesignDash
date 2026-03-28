@@ -1,14 +1,30 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import socket from '../services/socket'
 import { useGame } from '../context/GameContext'
 
 // Connects the socket and wires server-driven state transitions to GameContext.
 // Does NOT disconnect on unmount so the socket survives page navigation within a session.
+// Automatically re-emits JOIN_LOBBY on every (re)connect so page reloads restore the player.
 export function useSocket() {
-  const { dispatch } = useGame()
+  const { state, dispatch } = useGame()
+
+  // Ref keeps the connect handler from going stale without re-registering the effect
+  const identityRef = useRef(state)
+  identityRef.current = state
 
   useEffect(() => {
     socket.connect()
+
+    // Re-join the room whenever the socket connects (initial connect or after reload)
+    function onConnect() {
+      const { nickname, challengeCode, isHost } = identityRef.current
+      if (nickname && challengeCode) {
+        socket.emit('JOIN_LOBBY', { code: challengeCode, nickname, isHost })
+      }
+    }
+    socket.on('connect', onConnect)
+    // If already connected (navigating between pages without reload), emit immediately
+    if (socket.connected) onConnect()
 
     const onPlayersUpdated = (players) => dispatch({ type: 'SET_PLAYERS', players })
     const onGameStarted = ({ spec, startedAt, timeLimitSeconds }) =>
@@ -34,6 +50,7 @@ export function useSocket() {
     socket.on('SUBMISSIONS_UPDATED', onSubmissionsUpdated)
 
     return () => {
+      socket.off('connect', onConnect)
       socket.off('PLAYERS_UPDATED', onPlayersUpdated)
       socket.off('GAME_STARTED', onGameStarted)
       socket.off('START_VOTING', onStartVoting)

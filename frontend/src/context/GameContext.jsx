@@ -1,8 +1,19 @@
-import { createContext, useContext, useReducer } from 'react'
+import { createContext, useContext, useReducer, useEffect } from 'react'
 
 const GameContext = createContext(null)
 
-const initialState = {
+const SESSION_KEY = 'dda_identity'
+
+function loadIdentity() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
+const defaultState = {
   nickname: '',
   challengeCode: '',
   isHost: false,
@@ -18,6 +29,10 @@ const initialState = {
   submissions: [],
   scores: [],
 }
+
+// Hydrate identity fields from sessionStorage so a page reload restores who the player is
+const saved = loadIdentity()
+const initialState = saved ? { ...defaultState, ...saved } : defaultState
 
 function gameReducer(state, action) {
   switch (action.type) {
@@ -59,6 +74,21 @@ function gameReducer(state, action) {
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState)
+
+  // Keep sessionStorage in sync so reloads can restore identity
+  useEffect(() => {
+    if (!state.nickname || !state.challengeCode) return
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        nickname: state.nickname,
+        challengeCode: state.challengeCode,
+        isHost: state.isHost,
+        category: state.category,
+        timeLimit: state.timeLimit,
+      }))
+    } catch { /* ignore */ }
+  }, [state.nickname, state.challengeCode, state.isHost, state.category, state.timeLimit])
+
   return (
     <GameContext.Provider value={{ state, dispatch }}>
       {children}
