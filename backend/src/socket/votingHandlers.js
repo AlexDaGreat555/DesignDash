@@ -20,7 +20,8 @@ function registerVotingHandlers(io, socket) {
 
 function startVoting(io, code) {
   const room = store.getRoom(code)
-  if (!room) return
+  if (!room || room.phase === 'voting' || room.phase === 'results') return
+  clearTimeout(room.sprintTimer)
   room.phase = 'voting'
   room.currentSlide = 0
   room.shuffleSubmissions()

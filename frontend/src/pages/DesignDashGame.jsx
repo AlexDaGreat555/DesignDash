@@ -1,53 +1,43 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useGame } from '../context/GameContext'
+import { useSocket } from '../hooks/useSocket'
+import { uploadDesign } from '../services/api'
 import './DesignDashGame.css'
-
-const MOCK_SPEC = {
-  projectName: 'TechFest 2026',
-  type: 'Event Poster',
-  objective: 'Drive ticket sales for CMU\'s annual hackathon',
-  background: 'Annual student hackathon, 500 attendees expected. Sponsors include Google and Anthropic. Previous year had 350 attendees.',
-  targetAudience: 'CMU students, ages 18–24, tech-savvy, interested in startups, design, and engineering',
-  keyMessage: 'Build. Pitch. Win. March 28 at CMU.',
-  callToAction: 'Register now at venturehacks.dev',
-  visualDirection: 'Bold, techy, high-energy. Neon accents welcome. Think hackathon energy, not corporate.',
-}
 
 export default function DesignDashGame() {
   const { code } = useParams()
   const navigate = useNavigate()
-  const { state, dispatch } = useGame()
-  const { nickname, players, timeLimit } = state
+  const socket = useSocket()
+  const { state } = useGame()
+  const { nickname, players, spec, startedAt, timeLimit, submittedCount, phase } = state
 
-  const totalSeconds = timeLimit || 600
-  const [secondsLeft, setSecondsLeft] = useState(totalSeconds)
+  // Derive seconds left from server-stamped startedAt so all clients stay in sync
+  const getSecondsLeft = useCallback(() => {
+    if (!startedAt) return timeLimit || 600
+    return Math.max(0, (timeLimit || 600) - Math.floor((Date.now() - startedAt) / 1000))
+  }, [startedAt, timeLimit])
+
+  const [secondsLeft, setSecondsLeft] = useState(getSecondsLeft)
   const [uploadedFile, setUploadedFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [isDragging, setIsDragging] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState('')
   const fileInputRef = useRef(null)
 
-  // Mock submission tracking: start at 0, randomly tick up
-  const [submittedCount, setSubmittedCount] = useState(0)
-  const playerCount = players.length || 6
-
-  // Countdown timer
+  // Sync timer every second against the server timestamp
   useEffect(() => {
-    if (secondsLeft <= 0) return
-    const id = setInterval(() => setSecondsLeft((s) => s - 1), 1000)
+    const id = setInterval(() => setSecondsLeft(getSecondsLeft()), 1000)
     return () => clearInterval(id)
-  }, [secondsLeft])
+  }, [getSecondsLeft])
 
-  // Simulate other players submitting
+  // Navigate when server transitions phase
   useEffect(() => {
-    if (submittedCount >= playerCount - 1) return
-    const delay = 10000 + Math.random() * 30000
-    const id = setTimeout(() => {
-      setSubmittedCount((c) => Math.min(c + 1, playerCount - 1))
-    }, delay)
-    return () => clearTimeout(id)
-  }, [submittedCount, playerCount])
+    if (phase === 'voting') navigate(`/voting/${code}`)
+    if (phase === 'results') navigate(`/results/${code}`)
+  }, [phase, code, navigate])
 
   const handleFile = useCallback((file) => {
     if (!file || submitted) return
@@ -61,16 +51,24 @@ export default function DesignDashGame() {
   const handleDrop = (e) => {
     e.preventDefault()
     setIsDragging(false)
-    const file = e.dataTransfer.files?.[0]
-    handleFile(file)
+    handleFile(e.dataTransfer.files?.[0])
   }
 
-  const handleSubmit = () => {
-    if (!uploadedFile || submitted) return
-    setSubmitted(true)
-    setSubmittedCount((c) => c + 1)
-    // TODO: upload via API + emit UPLOAD_COMPLETE via socket
-    console.log('[mock] submitted design:', uploadedFile.name)
+  const handleSubmit = async () => {
+    if (!uploadedFile || submitted || uploading) return
+    setUploading(true)
+    setUploadError('')
+    try {
+      const formData = new FormData()
+      formData.append('design', uploadedFile)
+      const { data } = await uploadDesign(code, formData)
+      socket.emit('UPLOAD_COMPLETE', { code, submissionId: data.submissionId })
+      setSubmitted(true)
+    } catch {
+      setUploadError('Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const removeFile = () => {
@@ -81,11 +79,11 @@ export default function DesignDashGame() {
 
   const mins = String(Math.floor(secondsLeft / 60)).padStart(2, '0')
   const secs = String(secondsLeft % 60).padStart(2, '0')
+  const totalSeconds = timeLimit || 600
   const totalMins = Math.floor(totalSeconds / 60)
   const timerPct = secondsLeft / totalSeconds
   const timerUrgent = secondsLeft <= 60
-
-  const spec = MOCK_SPEC
+  const playerCount = players.length
 
   return (
     <div className="game-page">
@@ -113,33 +111,33 @@ export default function DesignDashGame() {
         {/* ---- Left: The Brief ---- */}
         <div className="game-brief">
           <span className="game-brief-label">THE BRIEF</span>
-          <h1 className="game-brief-title">{spec.projectName}</h1>
-          <span className="game-brief-type-badge">{spec.type}</span>
+          <h1 className="game-brief-title">{spec?.projectName}</h1>
+          <span className="game-brief-type-badge">{spec?.type}</span>
 
           <div className="game-brief-fields">
             <div className="game-brief-field">
               <span className="game-brief-field-label">OBJECTIVE</span>
-              <p>{spec.objective}</p>
+              <p>{spec?.objective}</p>
             </div>
             <div className="game-brief-field">
               <span className="game-brief-field-label">BACKGROUND</span>
-              <p>{spec.background}</p>
+              <p>{spec?.background}</p>
             </div>
             <div className="game-brief-field">
               <span className="game-brief-field-label">TARGET AUDIENCE</span>
-              <p>{spec.targetAudience}</p>
+              <p>{spec?.targetAudience}</p>
             </div>
             <div className="game-brief-field">
               <span className="game-brief-field-label">KEY MESSAGE</span>
-              <p>{spec.keyMessage}</p>
+              <p>{spec?.keyMessage}</p>
             </div>
             <div className="game-brief-field">
               <span className="game-brief-field-label">CALL TO ACTION</span>
-              <p>{spec.callToAction}</p>
+              <p>{spec?.callToAction}</p>
             </div>
             <div className="game-brief-field">
               <span className="game-brief-field-label">VISUAL DIRECTION</span>
-              <p>{spec.visualDirection}</p>
+              <p>{spec?.visualDirection}</p>
             </div>
           </div>
         </div>
@@ -198,6 +196,7 @@ export default function DesignDashGame() {
               onChange={(e) => handleFile(e.target.files?.[0])}
             />
           </div>
+          {uploadError && <p className="game-upload-error">{uploadError}</p>}
         </div>
       </main>
 
@@ -206,7 +205,7 @@ export default function DesignDashGame() {
         <div className="game-footer-inner">
           <div className="game-footer-status">
             <span className="game-footer-count">
-              {submitted ? submittedCount : submittedCount} of {playerCount} submitted
+              {submittedCount} of {playerCount} submitted
             </span>
             <div className="game-footer-dots">
               {Array.from({ length: playerCount }).map((_, i) => (
@@ -217,9 +216,9 @@ export default function DesignDashGame() {
           <button
             className="btn btn-dark game-footer-submit"
             onClick={handleSubmit}
-            disabled={!uploadedFile || submitted}
+            disabled={!uploadedFile || submitted || uploading}
           >
-            {submitted ? 'Submitted' : 'Submit Final'}
+            {uploading ? 'Uploading…' : submitted ? 'Submitted' : 'Submit Final'}
           </button>
         </div>
       </footer>
