@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/shared/Header'
 import { useGame } from '../context/GameContext'
+import { createChallenge } from '../services/api'
 import './StartGamePage.css'
 
 const CATEGORIES = [
@@ -27,14 +28,23 @@ export default function StartGamePage() {
   const [nickname, setNickname] = useState('')
   const [category, setCategory] = useState('')
   const [timeLimit, setTimeLimit] = useState(600)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const canSubmit = nickname.trim() && category
+  const canSubmit = nickname.trim() && category && !loading
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!canSubmit) return
-    const mockCode = 'DX-' + Math.random().toString(36).slice(2, 5).toUpperCase()
-    dispatch({ type: 'SET_IDENTITY', nickname, isHost: true, code: mockCode, category, timeLimit })
-    navigate(`/lobby/${mockCode}`)
+    setLoading(true)
+    setError('')
+    try {
+      const { data } = await createChallenge(category, timeLimit)
+      dispatch({ type: 'SET_IDENTITY', nickname, isHost: true, code: data.code, category, timeLimit })
+      navigate(`/lobby/${data.code}`)
+    } catch {
+      setError('Failed to create lobby. Is the server running?')
+      setLoading(false)
+    }
   }
 
   return (
@@ -113,9 +123,12 @@ export default function StartGamePage() {
             </div>
           </div>
 
+          {error && <p className="form-error">{error}</p>}
           <div className="start-game-actions">
             <button className="btn btn-ghost" onClick={() => navigate(-1)}>Cancel</button>
-            <button className="btn btn-primary" onClick={handleCreate} disabled={!canSubmit}>Create Lobby</button>
+            <button className="btn btn-primary" onClick={handleCreate} disabled={!canSubmit}>
+              {loading ? 'Creating…' : 'Create Lobby'}
+            </button>
           </div>
         </div>
       </main>
