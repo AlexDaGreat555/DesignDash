@@ -12,6 +12,15 @@ const db = new Database(DB_PATH)
 db.pragma('journal_mode = WAL')
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS submissions (
+    id        TEXT PRIMARY KEY,
+    mime_type TEXT NOT NULL,
+    data      BLOB NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`)
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS prompts (
     id               INTEGER PRIMARY KEY AUTOINCREMENT,
     category         TEXT    NOT NULL,

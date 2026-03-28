@@ -1,8 +1,5 @@
 const Anthropic = require('@anthropic-ai/sdk')
-const fs = require('fs')
-const path = require('path')
-
-const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads')
+const db = require('../db')
 
 let client = null
 function getClient() {
@@ -32,20 +29,17 @@ Respond with ONLY a single number between 1.0 and 5.0. No explanation, no text â
 
 /**
  * Score a design submission using Claude multimodal.
- * @param {string} submissionId - The filename of the uploaded image (e.g. "abc123.png")
+ * @param {string} submissionId - UUID of the submission stored in the DB
  * @param {object} spec - The design brief
  * @returns {Promise<number>} Score between 1.0 and 5.0
  */
 async function scoreSubmission(submissionId, spec) {
   try {
-    const imagePath = path.join(UPLOADS_DIR, submissionId)
-    if (!fs.existsSync(imagePath)) {
-      console.warn(`[aiJudge] Image not found: ${imagePath}`)
+    const row = db.prepare('SELECT mime_type, data FROM submissions WHERE id = ?').get(submissionId)
+    if (!row) {
+      console.warn(`[aiJudge] Submission not found in DB: ${submissionId}`)
       return 3.0
     }
-
-    const imageData = fs.readFileSync(imagePath)
-    const mimeType = submissionId.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg'
 
     const briefContext = [
       `Project: ${spec.projectName}`,
@@ -65,7 +59,7 @@ async function scoreSubmission(submissionId, spec) {
           content: [
             { type: 'text', text: JUDGE_PROMPT },
             { type: 'text', text: `\nDesign Brief:\n${briefContext}\n` },
-            { type: 'image', source: { type: 'base64', media_type: mimeType, data: imageData.toString('base64') } },
+            { type: 'image', source: { type: 'base64', media_type: row.mime_type, data: row.data.toString('base64') } },
           ],
         },
       ],

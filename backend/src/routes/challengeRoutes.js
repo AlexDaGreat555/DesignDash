@@ -8,5 +8,6 @@ router.post('/:code/join', challengeController.joinChallenge)
 router.post('/:code/upload', upload.single('design'), challengeController.uploadDesign)
 router.post('/:code/vote', challengeController.submitVote)
 router.get('/:code/results', challengeController.getResults)
+router.get('/submissions/:id', challengeController.serveSubmission)
 
 module.exports = router
