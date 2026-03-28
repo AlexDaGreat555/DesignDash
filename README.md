@@ -1,6 +1,6 @@
 # Design Dash
 
-A real-time, competitive design game. Players respond to automated Specs during a synchronized sprint, then vote on each other's designs in a live-broadcast-style voting session.
+A real-time, competitive design game. Players respond to automated Specs during a synchronized sprint, then vote on each other's designs in a live-broadcast-style voting session. An AI judge (Gemini 1.5 Flash) scores every submission and contributes to the final leaderboard.
 
 ## Tech Stack
 
@@ -11,27 +11,34 @@ A real-time, competitive design game. Players respond to automated Specs during 
 | Real-time | Socket.io 4 |
 | Database | SQLite via better-sqlite3 |
 | File uploads | Multer (local disk) |
+| AI Judge | Google Gemini 1.5 Flash (multimodal) |
 | State (server) | In-memory store (swap for Redis in production) |
 
 ---
 
 ## Prerequisites
 
-- **Node.js >= 18**
-- **npm >= 9**
+### Required for everyone
+
+- **Node.js >= 18** — [nodejs.org](https://nodejs.org)
+- **npm >= 9** — included with Node.js
 - **A C++ compiler** — required by `better-sqlite3`, which compiles native bindings during `npm install`:
-  - **macOS**: Xcode Command Line Tools — run `xcode-select --install` if not already installed
+  - **macOS**: Xcode Command Line Tools — run `xcode-select --install`
   - **Linux**: `sudo apt install build-essential` (Debian/Ubuntu) or equivalent
   - **Windows**: [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) — install the "Desktop development with C++" workload
-- **Python** — also required by `node-gyp` (the C++ build tool). Pre-installed on macOS and most Linux distros. On Windows, download from [python.org](https://www.python.org/downloads/).
+- **Python** — required by `node-gyp`. Pre-installed on macOS and most Linux distros. On Windows, download from [python.org](https://www.python.org/downloads/).
 
-> **macOS/Linux users**: if Node.js is already working on your machine, `npm install` will almost always succeed without any extra steps — the compiler tools are typically already present.
+> **macOS/Linux**: if Node.js is already working, `npm install` almost always succeeds without extra steps.
 >
-> **Windows users**: the C++ build tools are the most common friction point. If `npm install` fails with a `node-gyp` error, install the Visual Studio Build Tools linked above and re-run.
+> **Windows**: the C++ build tools are the most common friction point. If `npm install` fails with a `node-gyp` error, install the Visual Studio Build Tools above and re-run.
+
+### Required for the AI Judge
+
+- **A Gemini API key** — free to obtain at [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
 
 ---
 
-## Running Locally
+## Getting Started
 
 ### 1. Clone and install dependencies
 
@@ -41,15 +48,30 @@ cd DesignDash
 npm run install:all
 ```
 
-This installs root, `frontend/`, and `backend/` dependencies in one command. The SQLite database is created and seeded automatically the first time the backend starts — no manual setup needed.
+This installs root, `frontend/`, and `backend/` dependencies in one command.
 
-### 2. Configure the backend environment
+### 2. Configure environment variables
 
 ```bash
 cp backend/.env.example backend/.env
 ```
 
-The defaults work out of the box for local development — no changes needed.
+Open `backend/.env` and fill in the values:
+
+```env
+PORT=5001
+NODE_ENV=development
+UPLOAD_DIR=uploads
+GEMINI_API_KEY=your-gemini-api-key-here
+```
+
+**Getting a Gemini API key:**
+1. Go to [aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
+2. Sign in with a Google account
+3. Click **Create API key**
+4. Copy the key and paste it as the value of `GEMINI_API_KEY` in `backend/.env`
+
+> **Important:** Never paste your API key into `.env.example`, commit it to git, or share it in chat. Only `backend/.env` is safe — it is gitignored.
 
 ### 3. Create the uploads directory
 
@@ -63,22 +85,30 @@ mkdir -p backend/uploads
 npm run dev
 ```
 
-This runs both processes concurrently:
-
 | Process | URL |
 |---|---|
 | React (Vite) | http://localhost:3000 |
 | Express + Socket.io | http://localhost:5001 |
 
-Vite proxies all `/api`, `/socket.io`, and `/uploads` requests to the Express backend, so the frontend only needs to talk to port 3000.
+Vite proxies all `/api`, `/socket.io`, and `/uploads` requests to the backend, so the frontend only needs port 3000.
+
+The SQLite database is created and seeded automatically on first start — no extra steps needed.
 
 ---
 
-## Database
+## How a Game Works
 
-Prompt data is stored in a SQLite database at `backend/data/design_dash.db`.
+1. **Host** picks a design category and time limit → a random brief is pulled from the database (hidden from everyone)
+2. **Players** join via a 6-character challenge code and a nickname
+3. **Sprint** — the brief is revealed simultaneously and a synchronized countdown begins; players design and upload their work
+4. **Voting** — all submissions appear in a randomized blind loop (7 seconds each); players rate every design 1–5 stars except their own
+5. **Results** — Gemini 1.5 Flash scores each submission against the brief; the final score is the average of voter ratings and AI score; the leaderboard is revealed with both breakdowns
 
-**The database is created and seeded automatically** on first server start — you do not need to run anything manually for a fresh setup.
+---
+
+## Database & Prompts
+
+Prompts are stored in a SQLite database at `backend/data/design_dash.db`. The database and its initial data are created automatically on first server start.
 
 To manually re-seed (useful after editing `backend/src/db/seedData.js`):
 
@@ -86,8 +116,6 @@ To manually re-seed (useful after editing `backend/src/db/seedData.js`):
 cd backend
 npm run seed
 ```
-
-This clears the `prompts` table and re-inserts all entries from `seedData.js`.
 
 ### Prompt API
 
@@ -100,20 +128,18 @@ This clears the `prompts` table and re-inserts all entries from `seedData.js`.
 | `PUT` | `/api/prompts/:id` | Update a prompt (partial updates supported) |
 | `DELETE` | `/api/prompts/:id` | Delete a prompt |
 
+**Adding new prompts** — edit `backend/src/db/seedData.js` and run `npm run seed` from `backend/`. Categories must match the values in the frontend category picker (`Branding`, `UI Design`, `Illustration`, `Typography`, `Logo Design`, `Web Design`).
+
 ---
 
 ## Running Separately (optional)
 
-**Backend only:**
 ```bash
-cd backend
-npm run dev
-```
+# Backend only
+cd backend && npm run dev
 
-**Frontend only:**
-```bash
-cd frontend
-npm run dev
+# Frontend only
+cd frontend && npm run dev
 ```
 
 ---
@@ -123,15 +149,13 @@ npm run dev
 ```
 DesignDash/
 ├── frontend/                  # React frontend (Vite)
-│   ├── index.html
-│   ├── vite.config.js
 │   └── src/
 │       ├── main.jsx            # App entry point
 │       ├── App.jsx             # Route definitions
 │       ├── context/
 │       │   └── GameContext.jsx # Global game state (useReducer + sessionStorage)
 │       ├── hooks/
-│       │   └── useSocket.js    # Socket.io event wiring + auto re-join
+│       │   └── useSocket.js    # Socket.io event wiring + auto re-join on reload
 │       ├── services/
 │       │   ├── socket.js       # Shared socket instance
 │       │   └── api.js          # Axios REST helpers
@@ -145,7 +169,8 @@ DesignDash/
 │           └── ResultsPage.jsx
 │
 └── backend/                   # Express + Socket.io backend
-    ├── .env.example
+    ├── .env.example            # Environment variable template (no real secrets)
+    ├── .env                    # Your local secrets — gitignored, never commit this
     ├── uploads/               # Uploaded design images (gitignored)
     ├── data/                  # SQLite database file (gitignored)
     └── src/
@@ -155,8 +180,10 @@ DesignDash/
         │   └── index.js        # In-memory room/game state
         ├── db/
         │   ├── index.js        # SQLite connection, schema, auto-seed
-        │   ├── seedData.js     # Prompt pool (edit to add/change prompts)
+        │   ├── seedData.js     # Prompt pool — edit to add/change prompts
         │   └── seed.js         # Standalone seed script (npm run seed)
+        ├── services/
+        │   └── aiJudge.js      # Gemini 1.5 Flash scoring logic
         ├── routes/
         │   ├── challengeRoutes.js
         │   └── promptRoutes.js
@@ -206,9 +233,24 @@ DesignDash/
 | `POST` | `/api/challenges/:code/join` | Validate code + nickname |
 | `POST` | `/api/challenges/:code/upload` | Upload design image (`multipart/form-data`) |
 | `POST` | `/api/challenges/:code/vote` | Record a star rating |
+| `GET` | `/api/challenges/:code/results` | Fetch final scores (for page reload recovery) |
 | `GET` | `/api/prompts` | List prompts (`?category=` to filter) |
 | `GET` | `/api/prompts/categories` | List distinct categories |
 | `GET` | `/api/prompts/:id` | Get a single prompt |
 | `POST` | `/api/prompts` | Create a prompt |
 | `PUT` | `/api/prompts/:id` | Update a prompt |
 | `DELETE` | `/api/prompts/:id` | Delete a prompt |
+
+---
+
+## Testing With Multiple Players Locally
+
+Each browser tab has its own `sessionStorage`, so you can simulate multiple players on the same machine without different accounts. The safest approaches:
+
+| Method | Works |
+|---|---|
+| Two separate browser windows | Yes |
+| Normal tab + Incognito tab | Yes |
+| Two different browsers | Yes |
+| Fresh new tab (Cmd+T) | Yes |
+| Duplicated tab (Cmd+D) | No — copies sessionStorage, same identity |
