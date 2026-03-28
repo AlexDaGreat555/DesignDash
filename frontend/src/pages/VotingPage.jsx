@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useGame } from '../context/GameContext'
 import { useSocket } from '../hooks/useSocket'
+import { getImageUrl } from '../services/api'
 import './VotingPage.css'
 
 const SLIDE_DURATION_SECS = 7 // must match server SLIDE_DURATION_MS / 1000
@@ -93,7 +94,7 @@ export default function VotingPage() {
         <div className="voting-design-card">
           {current?.imageUrl ? (
             <img
-              src={current.imageUrl}
+              src={getImageUrl(current.imageUrl)}
               alt={`Design #${currentSlide + 1}`}
               className="voting-design-image"
             />

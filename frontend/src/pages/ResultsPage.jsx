@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useGame } from '../context/GameContext'
-import { getResults } from '../services/api'
+import { getResults, getImageUrl } from '../services/api'
 import './ResultsPage.css'
 
 const PODIUM_COLORS = {
@@ -102,10 +102,10 @@ export default function ResultsPage() {
                       {player.imageUrl ? (
                         <button
                           className="podium-design-preview"
-                          onClick={() => setExpandedImage(player.imageUrl)}
+                          onClick={() => setExpandedImage(getImageUrl(player.imageUrl))}
                           title="Click to expand"
                         >
-                          <img src={player.imageUrl} alt={`${player.nickname}'s design`} className="podium-design-img" />
+                          <img src={getImageUrl(player.imageUrl)} alt={`${player.nickname}'s design`} className="podium-design-img" />
                           <span className="podium-design-expand">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
                           </span>

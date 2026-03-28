@@ -20,4 +20,7 @@ export const submitVote = (code, submissionId, stars) =>
 export const getResults = (code) =>
   api.get(`/challenges/${code}/results`)
 
+export const getImageUrl = (relativePath) =>
+  relativePath ? `${BACKEND_URL}${relativePath}` : null
+
 export default api
