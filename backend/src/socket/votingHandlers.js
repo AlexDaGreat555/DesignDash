@@ -1,6 +1,6 @@
 const store = require('../store')
 
-const SLIDE_DURATION_MS = 30_000
+const SLIDE_DURATION_MS = 7_000
 
 // Events: SUBMIT_VOTE
 function registerVotingHandlers(io, socket) {
@@ -24,8 +24,12 @@ function startVoting(io, code) {
   clearTimeout(room.sprintTimer)
   room.phase = 'voting'
   room.currentSlide = 0
+  room.slideStartedAt = Date.now()
   room.shuffleSubmissions()
-  io.to(code).emit('START_VOTING', room.submissions)
+  io.to(code).emit('START_VOTING', {
+    submissions: room.submissions,
+    slideStartedAt: room.slideStartedAt,
+  })
   scheduleSlideAdvance(io, code)
 }
 
@@ -47,7 +51,8 @@ function advanceSlide(io, code) {
   }
 
   room.currentSlide += 1
-  io.to(code).emit('NEXT_SLIDE', room.currentSlide)
+  room.slideStartedAt = Date.now()
+  io.to(code).emit('NEXT_SLIDE', { index: room.currentSlide, slideStartedAt: room.slideStartedAt })
   scheduleSlideAdvance(io, code)
 }
 

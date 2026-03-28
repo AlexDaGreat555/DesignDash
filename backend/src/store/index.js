@@ -13,6 +13,7 @@ class Room {
     this.submissions = []
     this.votes = [] // [{ voterId, submissionId, stars }]
     this.currentSlide = 0
+    this.slideStartedAt = null
     this.slideTimer = null
   }
 
