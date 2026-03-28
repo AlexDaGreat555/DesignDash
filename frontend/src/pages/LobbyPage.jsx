@@ -16,18 +16,7 @@ export default function LobbyPage() {
   const [copied, setCopied] = useState(false)
 
   const socket = useSocket()
-  const { isHost, nickname, players, category, timeLimit, phase } = state
-
-  // Emit JOIN_LOBBY once connected
-  useEffect(() => {
-    if (!nickname) return
-    function onConnect() {
-      socket.emit('JOIN_LOBBY', { code, nickname, isHost })
-    }
-    socket.on('connect', onConnect)
-    if (socket.connected) onConnect()
-    return () => socket.off('connect', onConnect)
-  }, [socket, code, nickname, isHost])
+  const { isHost, players, category, timeLimit, phase } = state
 
   // Navigate to game when host starts
   useEffect(() => {
