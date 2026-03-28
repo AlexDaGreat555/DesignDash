@@ -55,7 +55,7 @@ Self-Voting: The rating UI is disabled when a player's own design is shown in th
 3.5 Results & Leaderboard
 The Reveal: After the last design is voted on, the system reveals the names behind the designs and the final scores.
 
-Session Leaderboard: Displays cumulative wins/points for the current lobby session.
+Session Leaderboard: Displays cumulative wins/points for the current lobby session based on the previous blind voting phase. In addition, an ai judge also provides a star rating for each design, which also adds to teh cumulative score. The ai agent's score should be revealed below the results for additional context
 
 4. Technical Considerations (For the Developer)
 WebSockets (Socket.io): Use a central "Source of Truth" on the server to push state changes (START_VOTING, NEXT_SLIDE, SHOW_RESULTS) to all clients.
