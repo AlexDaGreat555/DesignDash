@@ -14,7 +14,11 @@ function registerVotingHandlers(io, socket) {
     const eligibleVoters = room.players.filter((p) => p.submissionId !== currentSubmission?.id)
     const allVoted = eligibleVoters.every((p) => room.hasVoted(p.id, currentSubmission?.id))
 
-    if (allVoted) advanceSlide(io, code)
+    if (allVoted) {
+      advanceSlide(io, code).catch((err) =>
+        console.error('[voting] advanceSlide error:', err)
+      )
+    }
   })
 }
 
@@ -36,17 +40,23 @@ function startVoting(io, code) {
 function scheduleSlideAdvance(io, code) {
   const room = store.getRoom(code)
   if (!room) return
-  room.slideTimer = setTimeout(() => advanceSlide(io, code), SLIDE_DURATION_MS)
+  room.slideTimer = setTimeout(() => {
+    advanceSlide(io, code).catch((err) =>
+      console.error('[voting] advanceSlide error:', err)
+    )
+  }, SLIDE_DURATION_MS)
 }
 
-function advanceSlide(io, code) {
+async function advanceSlide(io, code) {
   const room = store.getRoom(code)
   if (!room) return
   clearTimeout(room.slideTimer)
 
   if (room.currentSlide + 1 >= room.submissions.length) {
     room.phase = 'results'
-    io.to(code).emit('SHOW_RESULTS', room.computeScores())
+    // Score all submissions with Gemini before revealing results
+    const scores = await room.computeScores()
+    io.to(code).emit('SHOW_RESULTS', scores)
     return
   }
 
