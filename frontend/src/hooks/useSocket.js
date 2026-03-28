@@ -13,11 +13,12 @@ export function useSocket() {
     const onPlayersUpdated = (players) => dispatch({ type: 'SET_PLAYERS', players })
     const onGameStarted = ({ spec, startedAt, timeLimitSeconds }) =>
       dispatch({ type: 'SET_GAME_STARTED', spec, startedAt, timeLimitSeconds })
-    const onStartVoting = (submissions) => {
-      dispatch({ type: 'SET_SUBMISSIONS', submissions })
+    const onStartVoting = ({ submissions, slideStartedAt }) => {
+      dispatch({ type: 'SET_SUBMISSIONS', submissions, slideStartedAt })
       dispatch({ type: 'SET_PHASE', phase: 'voting' })
     }
-    const onNextSlide = (index) => dispatch({ type: 'SET_SLIDE', index })
+    const onNextSlide = ({ index, slideStartedAt }) =>
+      dispatch({ type: 'SET_SLIDE', index, slideStartedAt })
     const onShowResults = (scores) => {
       dispatch({ type: 'SET_SCORES', scores })
       dispatch({ type: 'SET_PHASE', phase: 'results' })

@@ -1,80 +1,60 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useGame } from '../context/GameContext'
+import { useSocket } from '../hooks/useSocket'
 import './VotingPage.css'
 
-const SLIDE_DURATION = 5 // seconds per design (5s for testing, 30s in prod)
-
-// Mock submissions — in production these come from the server after the design phase
-const MOCK_SUBMISSIONS = [
-  { id: 's1', playerId: 'p1', imageUrl: 'https://picsum.photos/seed/design1/600/400', hasSubmission: true },
-  { id: 's2', playerId: 'me', imageUrl: 'https://picsum.photos/seed/design2/600/400', hasSubmission: true },
-  { id: 's3', playerId: 'p3', imageUrl: 'https://picsum.photos/seed/design3/600/400', hasSubmission: true },
-  { id: 's4', playerId: 'p4', imageUrl: null, hasSubmission: false }, // "Wall of Shame" — no submission
-  { id: 's5', playerId: 'p5', imageUrl: 'https://picsum.photos/seed/design5/600/400', hasSubmission: true },
-  { id: 's6', playerId: 'p6', imageUrl: 'https://picsum.photos/seed/design6/600/400', hasSubmission: true },
-  { id: 's7', playerId: 'p7', imageUrl: 'https://picsum.photos/seed/design7/600/400', hasSubmission: true },
-]
+const SLIDE_DURATION_SECS = 7 // must match server SLIDE_DURATION_MS / 1000
 
 export default function VotingPage() {
   const { code } = useParams()
   const navigate = useNavigate()
-  const { dispatch } = useGame()
-  const submissions = MOCK_SUBMISSIONS
-  const totalSlides = submissions.length
-  const myPlayerId = 'me' // matches MOCK_SUBMISSIONS
+  const socket = useSocket()
+  const { state } = useGame()
+  const { submissions, currentSlide, slideStartedAt, phase, spec } = state
 
-  const [currentSlide, setCurrentSlide] = useState(0)
-  const [slideTimer, setSlideTimer] = useState(SLIDE_DURATION)
+  const totalSlides = submissions.length
+  const current = submissions[currentSlide]
+  const isOwnDesign = current?.playerId === socket.id
+
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
-  const [votes, setVotes] = useState({})
   const [voteSubmitted, setVoteSubmitted] = useState(false)
 
-  const current = submissions[currentSlide]
-  const isOwnDesign = current?.playerId === myPlayerId
+  // Derive remaining seconds from server-stamped slideStartedAt
+  const getSlideTimeLeft = useCallback(() => {
+    if (!slideStartedAt) return SLIDE_DURATION_SECS
+    return Math.max(0, SLIDE_DURATION_SECS - Math.floor((Date.now() - slideStartedAt) / 1000))
+  }, [slideStartedAt])
 
-  // Advance to next slide
-  const advanceSlide = useCallback(() => {
-    if (currentSlide + 1 >= totalSlides) {
-      // All designs reviewed — go to results
-      dispatch({ type: 'SET_PHASE', phase: 'results' })
-      navigate(`/results/${code}`)
-      return
-    }
-    setCurrentSlide((s) => s + 1)
-    setSlideTimer(SLIDE_DURATION)
-    setRating(0)
-    setHoverRating(0)
-    setVoteSubmitted(false)
-  }, [currentSlide, totalSlides, code, navigate, dispatch])
+  const [slideTimer, setSlideTimer] = useState(getSlideTimeLeft)
 
-  // Per-slide countdown
+  // Tick every second, recomputing from server timestamp so all clients stay in sync
   useEffect(() => {
-    if (slideTimer <= 0) {
-      advanceSlide()
-      return
-    }
-    const id = setInterval(() => setSlideTimer((t) => t - 1), 1000)
+    setSlideTimer(getSlideTimeLeft())
+    const id = setInterval(() => setSlideTimer(getSlideTimeLeft()), 1000)
     return () => clearInterval(id)
-  }, [slideTimer, advanceSlide])
+  }, [getSlideTimeLeft])
 
-  // Reset rating state when slide changes
+  // Reset vote UI whenever the server advances to a new slide
   useEffect(() => {
     setRating(0)
     setHoverRating(0)
     setVoteSubmitted(false)
   }, [currentSlide])
 
+  // Navigate when server moves to results
+  useEffect(() => {
+    if (phase === 'results') navigate(`/results/${code}`)
+  }, [phase, code, navigate])
+
   const handleSubmitVote = () => {
-    if (isOwnDesign || rating === 0 || voteSubmitted) return
-    setVotes((prev) => ({ ...prev, [current.id]: rating }))
+    if (isOwnDesign || !current?.id || rating === 0 || voteSubmitted) return
+    socket.emit('SUBMIT_VOTE', { code, submissionId: current.id, stars: rating })
     setVoteSubmitted(true)
-    // TODO: emit SUBMIT_VOTE via socket
-    console.log(`[mock] voted ${rating} stars on submission ${current.id}`)
   }
 
-  const timerPct = slideTimer / SLIDE_DURATION
+  const timerPct = slideTimer / SLIDE_DURATION_SECS
 
   return (
     <div className="voting-page">
@@ -88,7 +68,7 @@ export default function VotingPage() {
           </span>
           <span className="brand-name">Design Dash</span>
         </Link>
-        <span className="voting-header-challenge">TechFest 2026 Poster Battle</span>
+        <span className="voting-header-challenge">{spec?.projectName}</span>
         <span className="game-header-code">{code}</span>
       </header>
 
@@ -111,7 +91,7 @@ export default function VotingPage() {
       {/* Main: Design display */}
       <main className="voting-main">
         <div className="voting-design-card">
-          {current?.hasSubmission ? (
+          {current?.imageUrl ? (
             <img
               src={current.imageUrl}
               alt={`Design #${currentSlide + 1}`}
@@ -145,45 +125,43 @@ export default function VotingPage() {
                 <span className="voting-own-badge">Your Design</span>
                 <p className="voting-own-text">You cannot rate your own submission</p>
               </div>
-            ) : !current?.hasSubmission ? (
+            ) : !current?.imageUrl ? (
               <div className="voting-own-design">
                 <p className="voting-own-text">No submission to rate</p>
               </div>
             ) : (
-              <>
-                <div className="voting-stars">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      className={`voting-star ${star <= (hoverRating || rating) ? 'voting-star--active' : ''} ${voteSubmitted ? 'voting-star--locked' : ''}`}
-                      onClick={() => !voteSubmitted && setRating(star)}
-                      onMouseEnter={() => !voteSubmitted && setHoverRating(star)}
-                      onMouseLeave={() => !voteSubmitted && setHoverRating(0)}
-                      disabled={voteSubmitted}
-                      aria-label={`${star} star`}
-                    >
-                      <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                          fill={star <= (hoverRating || rating) ? '#f59e0b' : 'none'}
-                          stroke={star <= (hoverRating || rating) ? '#f59e0b' : '#d1d5db'}
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  ))}
-                  {rating > 0 && <span className="voting-rating-value">{rating}/5</span>}
-                </div>
-              </>
+              <div className="voting-stars">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    className={`voting-star ${star <= (hoverRating || rating) ? 'voting-star--active' : ''} ${voteSubmitted ? 'voting-star--locked' : ''}`}
+                    onClick={() => !voteSubmitted && setRating(star)}
+                    onMouseEnter={() => !voteSubmitted && setHoverRating(star)}
+                    onMouseLeave={() => !voteSubmitted && setHoverRating(0)}
+                    disabled={voteSubmitted}
+                    aria-label={`${star} star`}
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                        fill={star <= (hoverRating || rating) ? '#f59e0b' : 'none'}
+                        stroke={star <= (hoverRating || rating) ? '#f59e0b' : '#d1d5db'}
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                ))}
+                {rating > 0 && <span className="voting-rating-value">{rating}/5</span>}
+              </div>
             )}
           </div>
 
           <button
             className="btn btn-dark voting-submit-btn"
             onClick={handleSubmitVote}
-            disabled={isOwnDesign || !current?.hasSubmission || rating === 0 || voteSubmitted}
+            disabled={isOwnDesign || !current?.imageUrl || rating === 0 || voteSubmitted}
           >
             {voteSubmitted ? 'Voted!' : 'Submit Vote'}
           </button>

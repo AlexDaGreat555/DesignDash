@@ -14,6 +14,7 @@ const initialState = {
   startedAt: null,
   submittedCount: 0,
   currentSlide: 0,
+  slideStartedAt: null,
   submissions: [],
   scores: [],
 }
@@ -46,9 +47,9 @@ function gameReducer(state, action) {
     case 'SET_PHASE':
       return { ...state, phase: action.phase }
     case 'SET_SLIDE':
-      return { ...state, currentSlide: action.index }
+      return { ...state, currentSlide: action.index, slideStartedAt: action.slideStartedAt }
     case 'SET_SUBMISSIONS':
-      return { ...state, submissions: action.submissions }
+      return { ...state, submissions: action.submissions, slideStartedAt: action.slideStartedAt }
     case 'SET_SCORES':
       return { ...state, scores: action.scores }
     default:
