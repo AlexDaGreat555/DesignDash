@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Header from '../components/shared/Header'
 import { useGame } from '../context/GameContext'
+import { joinChallenge } from '../services/api'
 import './JoinGamePage.css'
 
 export default function JoinGamePage() {
@@ -10,13 +11,24 @@ export default function JoinGamePage() {
 
   const [code, setCode] = useState('')
   const [nickname, setNickname] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const canSubmit = code.trim() && nickname.trim()
+  const canSubmit = code.trim() && nickname.trim() && !loading
 
-  const handleJoin = () => {
+  const handleJoin = async () => {
     if (!canSubmit) return
-    dispatch({ type: 'SET_IDENTITY', nickname, isHost: false, code: code.trim().toUpperCase() })
-    navigate(`/lobby/${code.trim().toUpperCase()}`)
+    const trimmedCode = code.trim().toUpperCase()
+    setLoading(true)
+    setError('')
+    try {
+      await joinChallenge(trimmedCode, nickname.trim())
+      dispatch({ type: 'SET_IDENTITY', nickname: nickname.trim(), isHost: false, code: trimmedCode })
+      navigate(`/lobby/${trimmedCode}`)
+    } catch (err) {
+      setError(err.response?.status === 404 ? 'Challenge not found. Check the code and try again.' : 'Failed to join. Is the server running?')
+      setLoading(false)
+    }
   }
 
   return (
@@ -51,8 +63,9 @@ export default function JoinGamePage() {
               />
             </div>
 
+            {error && <p className="form-error">{error}</p>}
             <button className="btn btn-primary btn-full" onClick={handleJoin} disabled={!canSubmit}>
-              Join Lobby
+              {loading ? 'Joining…' : 'Join Lobby'}
             </button>
 
             <p className="join-game-alt">

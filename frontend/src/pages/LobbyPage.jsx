@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import Header from '../components/shared/Header'
 import { useGame } from '../context/GameContext'
+import { useSocket } from '../hooks/useSocket'
 import './LobbyPage.css'
 
 function formatTime(seconds) {
@@ -12,22 +12,24 @@ function formatTime(seconds) {
 export default function LobbyPage() {
   const { code } = useParams()
   const navigate = useNavigate()
-  const { state, dispatch } = useGame()
+  const { state } = useGame()
   const [copied, setCopied] = useState(false)
 
+  const socket = useSocket()
   const { isHost, nickname, players, category, timeLimit, phase } = state
 
-  // Seed mock players on mount so the lobby UI is populated
+  // Emit JOIN_LOBBY once connected
   useEffect(() => {
     if (!nickname) return
-    const self = { id: 'me', nickname, isHost }
-    const mocks = isHost
-      ? [self, { id: 'p2', nickname: 'PixelMaster', isHost: false }, { id: 'p3', nickname: 'ColorWizard', isHost: false }]
-      : [{ id: 'host', nickname: 'DesignMaster', isHost: true }, self, { id: 'p3', nickname: 'PixelMaster', isHost: false }]
-    dispatch({ type: 'SET_PLAYERS', players: mocks })
-  }, [nickname]) // eslint-disable-line react-hooks/exhaustive-deps
+    function onConnect() {
+      socket.emit('JOIN_LOBBY', { code, nickname, isHost })
+    }
+    socket.on('connect', onConnect)
+    if (socket.connected) onConnect()
+    return () => socket.off('connect', onConnect)
+  }, [socket, code, nickname, isHost])
 
-  // Navigate to game when host starts (wired up once backend is live)
+  // Navigate to game when host starts
   useEffect(() => {
     if (phase === 'sprint') navigate(`/game/${code}`)
   }, [phase, code, navigate])
@@ -42,9 +44,8 @@ export default function LobbyPage() {
     }
   }
 
-  // TODO: emit START_GAME via socket once backend is connected
   const handleStart = () => {
-    console.log('[mock] START_GAME emitted for code', code)
+    socket.emit('START_GAME', { code })
   }
 
   return (
