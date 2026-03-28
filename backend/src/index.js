@@ -3,7 +3,7 @@ const http = require('http')
 const app = require('./app')
 const { initSocket } = require('./socket')
 
-const PORT = process.env.PORT || 5000
+const PORT = process.env.PORT || 5001
 
 const server = http.createServer(app)
 initSocket(server)

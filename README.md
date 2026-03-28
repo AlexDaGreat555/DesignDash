@@ -58,7 +58,7 @@ This runs both processes concurrently:
 | Process | URL |
 |---|---|
 | React (Vite) | http://localhost:3000 |
-| Express + Socket.io | http://localhost:5000 |
+| Express + Socket.io | http://localhost:5001 |
 
 Vite proxies all `/api` and `/socket.io` requests to the Express backend, so the frontend only needs to talk to port 3000.
 

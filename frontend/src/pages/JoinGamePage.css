@@ -1,0 +1,67 @@
+.join-game-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f9fafb;
+}
+
+.join-game-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+}
+
+.join-game-card {
+  width: 100%;
+  max-width: 480px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 40px 36px;
+  text-align: center;
+}
+
+.join-game-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #111;
+  margin-bottom: 8px;
+}
+
+.join-game-subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 28px;
+}
+
+.join-game-form {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.join-code-input {
+  text-align: center;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+}
+
+.join-game-alt {
+  text-align: center;
+  font-size: 14px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.join-game-link {
+  color: #5ec6c6;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.join-game-link:hover {
+  text-decoration: underline;
+}

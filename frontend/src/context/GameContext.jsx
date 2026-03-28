@@ -6,6 +6,8 @@ const initialState = {
   nickname: '',
   challengeCode: '',
   isHost: false,
+  category: '',
+  timeLimit: 600,
   players: [],
   spec: null,
   phase: 'idle', // idle | lobby | sprint | processing | voting | results
@@ -17,7 +19,14 @@ const initialState = {
 function gameReducer(state, action) {
   switch (action.type) {
     case 'SET_IDENTITY':
-      return { ...state, nickname: action.nickname, isHost: action.isHost, challengeCode: action.code }
+      return {
+        ...state,
+        nickname: action.nickname,
+        isHost: action.isHost,
+        challengeCode: action.code,
+        category: action.category || state.category,
+        timeLimit: action.timeLimit || state.timeLimit,
+      }
     case 'SET_PLAYERS':
       return { ...state, players: action.players }
     case 'SET_SPEC':
