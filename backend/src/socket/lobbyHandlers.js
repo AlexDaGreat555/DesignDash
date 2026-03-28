@@ -8,6 +8,12 @@ function registerLobbyHandlers(io, socket) {
     room.addPlayer({ id: socket.id, nickname, isHost: !!isHost })
     socket.join(code)
     io.to(code).emit('PLAYERS_UPDATED', room.players)
+
+    // Catch up a player who joins or reconnects while voting is already in progress
+    if (room.phase === 'voting') {
+      socket.emit('START_VOTING', { submissions: room.submissions, slideStartedAt: room.slideStartedAt })
+      socket.emit('NEXT_SLIDE', { index: room.currentSlide, slideStartedAt: room.slideStartedAt })
+    }
   })
 
   socket.on('START_GAME', ({ code }) => {
