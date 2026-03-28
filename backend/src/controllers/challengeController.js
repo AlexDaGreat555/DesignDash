@@ -4,7 +4,7 @@ const store = require('../store')
 function createChallenge(req, res) {
   const { categoryTag, timeLimitSeconds } = req.body
   const code = uuidv4().slice(0, 6).toUpperCase()
-  store.getOrCreateRoom(code)
+  store.getOrCreateRoom(code, timeLimitSeconds)
   res.status(201).json({ code, categoryTag, timeLimitSeconds })
 }
 

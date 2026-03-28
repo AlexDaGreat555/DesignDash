@@ -9,6 +9,9 @@ function registerGameHandlers(io, socket) {
     if (!room) return
     room.markUploaded(socket.id, submissionId)
 
+    const submittedCount = room.players.filter((p) => p.submissionId).length
+    io.to(code).emit('SUBMISSIONS_UPDATED', { submittedCount, totalCount: room.players.length })
+
     const allUploaded = room.players.every((p) => p.submissionId)
     if (allUploaded) {
       startVoting(io, code)

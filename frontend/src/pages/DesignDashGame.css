@@ -388,3 +388,10 @@
     padding-bottom: 120px;
   }
 }
+
+.game-upload-error {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #ef4444;
+  text-align: center;
+}
