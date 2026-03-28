@@ -1,5 +1,5 @@
 {
-  "name": "design-dash-server",
+  "name": "design-dash-backend",
   "version": "0.1.0",
   "type": "commonjs",
   "scripts": {

@@ -31,12 +31,12 @@ cd DesignDash
 npm run install:all
 ```
 
-This installs root, `client/`, and `server/` dependencies in one command.
+This installs root, `frontend/`, and `backend/` dependencies in one command.
 
-### 2. Configure the server environment
+### 2. Configure the backend environment
 
 ```bash
-cp server/.env.example server/.env
+cp backend/.env.example backend/.env
 ```
 
 The defaults work out of the box for local development — no changes needed.
@@ -44,7 +44,7 @@ The defaults work out of the box for local development — no changes needed.
 ### 3. Create the uploads directory
 
 ```bash
-mkdir -p server/uploads
+mkdir -p backend/uploads
 ```
 
 ### 4. Start both servers
@@ -60,7 +60,7 @@ This runs both processes concurrently:
 | React (Vite) | http://localhost:3000 |
 | Express + Socket.io | http://localhost:5000 |
 
-Vite proxies all `/api` and `/socket.io` requests to the Express server, so the frontend only needs to talk to port 3000.
+Vite proxies all `/api` and `/socket.io` requests to the Express backend, so the frontend only needs to talk to port 3000.
 
 ---
 
@@ -68,13 +68,13 @@ Vite proxies all `/api` and `/socket.io` requests to the Express server, so the 
 
 **Backend only:**
 ```bash
-cd server
+cd backend
 npm run dev
 ```
 
 **Frontend only:**
 ```bash
-cd client
+cd frontend
 npm run dev
 ```
 
@@ -84,7 +84,7 @@ npm run dev
 
 ```
 DesignDash/
-├── client/                    # React frontend (Vite)
+├── frontend/                  # React frontend (Vite)
 │   ├── index.html
 │   ├── vite.config.js
 │   └── src/
@@ -119,7 +119,7 @@ DesignDash/
 │           └── results/
 │               └── Leaderboard.jsx
 │
-└── server/                    # Express + Socket.io backend
+└── backend/                   # Express + Socket.io backend
     ├── .env.example
     ├── uploads/               # Local file storage (gitignored)
     └── src/
@@ -144,16 +144,16 @@ DesignDash/
 
 ## Socket.io Events Reference
 
-### Client → Server
+### Frontend → Backend
 
 | Event | Payload | Description |
 |---|---|---|
 | `JOIN_LOBBY` | `{ code, nickname, isHost }` | Join a challenge room |
 | `START_GAME` | `{ code }` | Host triggers the sprint |
-| `UPLOAD_COMPLETE` | `{ code, submissionId }` | Notify server upload is done |
+| `UPLOAD_COMPLETE` | `{ code, submissionId }` | Notify backend upload is done |
 | `SUBMIT_VOTE` | `{ code, submissionId, stars }` | Cast a 1–5 star vote |
 
-### Server → Client
+### Backend → Frontend
 
 | Event | Payload | Description |
 |---|---|---|
