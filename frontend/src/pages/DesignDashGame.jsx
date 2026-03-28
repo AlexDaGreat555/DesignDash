@@ -39,6 +39,19 @@ export default function DesignDashGame() {
     return () => clearInterval(id)
   }, [secondsLeft])
 
+  // Transition to voting when timer ends OR all players have submitted
+  const allSubmitted = submittedCount >= playerCount
+  useEffect(() => {
+    if (secondsLeft <= 0 || allSubmitted) {
+      const delay = allSubmitted ? 1500 : 2000 // brief "processing" pause
+      const id = setTimeout(() => {
+        dispatch({ type: 'SET_PHASE', phase: 'voting' })
+        navigate(`/voting/${code}`)
+      }, delay)
+      return () => clearTimeout(id)
+    }
+  }, [secondsLeft, allSubmitted, code, navigate, dispatch])
+
   // Simulate other players submitting
   useEffect(() => {
     if (submittedCount >= playerCount - 1) return

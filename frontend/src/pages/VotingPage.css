@@ -1,0 +1,255 @@
+.voting-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #fafafa;
+}
+
+/* ---- Header ---- */
+.voting-header {
+  justify-content: space-between;
+}
+
+.voting-header-challenge {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* ---- Sub-header ---- */
+.voting-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 32px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+.voting-phase-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.voting-slide-counter {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.voting-slide-current {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111;
+}
+
+.voting-slide-sep {
+  font-size: 16px;
+  color: #9ca3af;
+  margin: 0 2px;
+}
+
+.voting-slide-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #9ca3af;
+}
+
+.voting-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voting-timer-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: #374151;
+  font-variant-numeric: tabular-nums;
+}
+
+.voting-timer-bar {
+  width: 80px;
+  height: 4px;
+  background: #e5e7eb;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.voting-timer-bar-fill {
+  height: 100%;
+  background: #5ec6c6;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+/* ---- Main: design display ---- */
+.voting-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px 120px;
+}
+
+.voting-design-card {
+  max-width: 620px;
+  width: 100%;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+}
+
+.voting-design-image {
+  width: 100%;
+  display: block;
+  object-fit: contain;
+}
+
+/* No submission placeholder */
+.voting-no-submission {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 32px;
+  text-align: center;
+}
+
+.voting-no-submission-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.voting-no-submission-hint {
+  font-size: 13px;
+  color: #d1d5db;
+}
+
+/* ---- Footer ---- */
+.voting-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 32px;
+  z-index: 10;
+}
+
+.voting-footer-inner {
+  max-width: 1060px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.voting-footer-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.voting-footer-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.voting-footer-author {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* Rating area */
+.voting-rating-area {
+  display: flex;
+  align-items: center;
+}
+
+.voting-stars {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voting-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  transition: transform 0.1s;
+}
+
+.voting-star:hover:not(:disabled) {
+  transform: scale(1.15);
+}
+
+.voting-star--locked {
+  cursor: default;
+}
+
+.voting-rating-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+/* Own design / no submission state */
+.voting-own-design {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.voting-own-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: #5ec6c6;
+  background: #f0fdfa;
+  border: 1px solid #99f6e4;
+  border-radius: 6px;
+  padding: 4px 10px;
+}
+
+.voting-own-text {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* Submit button */
+.voting-submit-btn {
+  min-width: 130px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .voting-subheader {
+    padding: 10px 16px;
+  }
+
+  .voting-footer-inner {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .voting-design-card {
+    min-height: 260px;
+  }
+}
